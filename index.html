@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>かんたん計算機</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #fff;
+      font-size: 22px;
+      margin-bottom: 16px;
+      font-weight: 600;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .calculator {
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .display {
+      background: #f4f4f8;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      text-align: right;
+      min-height: 90px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .history {
+      color: #999;
+      font-size: 16px;
+      min-height: 22px;
+      word-break: break-all;
+    }
+
+    .current {
+      color: #333;
+      font-size: 40px;
+      font-weight: 600;
+      word-break: break-all;
+      line-height: 1.1;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 18px 0;
+      font-size: 22px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #e9e9ef;
+      color: #333;
+      transition: transform 0.05s ease, filter 0.15s ease;
+    }
+
+    button:hover {
+      filter: brightness(0.95);
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+
+    .op {
+      background: #ff9f43;
+      color: #fff;
+    }
+
+    .func {
+      background: #d1d1db;
+      color: #333;
+    }
+
+    .equal {
+      background: #667eea;
+      color: #fff;
+    }
+
+    .zero {
+      grid-column: span 2;
+    }
+
+    /* ロック画面（パスワード入力） */
+    #lock {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .lock-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 32px 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+      width: 100%;
+      max-width: 320px;
+      text-align: center;
+    }
+
+    .lock-card .lock-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .lock-card p {
+      color: #555;
+      font-size: 15px;
+      margin-bottom: 20px;
+    }
+
+    .lock-card input {
+      width: 100%;
+      padding: 12px;
+      font-size: 18px;
+      border: 2px solid #d1d1db;
+      border-radius: 10px;
+      text-align: center;
+      margin-bottom: 12px;
+      outline: none;
+    }
+
+    .lock-card input:focus {
+      border-color: #667eea;
+    }
+
+    .lock-card button {
+      width: 100%;
+      background: #667eea;
+      color: #fff;
+      font-size: 18px;
+      padding: 12px 0;
+    }
+
+    .lock-error {
+      color: #e74c3c;
+      font-size: 14px;
+      min-height: 20px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- ロック画面：正しいパスワードを入れると消えます -->
+  <div id="lock">
+    <div class="lock-card">
+      <div class="lock-icon">🔒</div>
+      <p>パスワードを入力してください</p>
+      <input type="password" id="pw-input" placeholder="パスワード" autofocus>
+      <button onclick="tryUnlock()">ひらく</button>
+      <div class="lock-error" id="lock-error"></div>
+    </div>
+  </div>
+
+  <h1>🧮 かんたん計算機</h1>
+
+  <div class="calculator">
+    <div class="display">
+      <div class="history" id="history"></div>
+      <div class="current" id="current">0</div>
+    </div>
+
+    <div class="buttons">
+      <button class="func" onclick="clearAll()">C</button>
+      <button class="func" onclick="deleteLast()">←</button>
+      <button class="func" onclick="percent()">%</button>
+      <button class="op" onclick="chooseOp('÷')">÷</button>
+
+      <button onclick="inputNumber('7')">7</button>
+      <button onclick="inputNumber('8')">8</button>
+      <button onclick="inputNumber('9')">9</button>
+      <button class="op" onclick="chooseOp('×')">×</button>
+
+      <button onclick="inputNumber('4')">4</button>
+      <button onclick="inputNumber('5')">5</button>
+      <button onclick="inputNumber('6')">6</button>
+      <button class="op" onclick="chooseOp('−')">−</button>
+
+      <button onclick="inputNumber('1')">1</button>
+      <button onclick="inputNumber('2')">2</button>
+      <button onclick="inputNumber('3')">3</button>
+      <button class="op" onclick="chooseOp('＋')">＋</button>
+
+      <button class="zero" onclick="inputNumber('0')">0</button>
+      <button onclick="inputDot()">.</button>
+      <button class="equal" onclick="calculate()">=</button>
+    </div>
+  </div>
+
+  <script>
+    // ===== パスワードロック =====
+    // パスワードそのものではなく「指紋（ハッシュ）」だけを保存しています
+    const PASS_HASH = '18b0ecdedec5a8749bafdf1c50a8cb56d94b6272a231d7722c837300e31d4a26';
+
+    async function sha256(text) {
+      const data = new TextEncoder().encode(text);
+      const buf = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(buf))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    async function tryUnlock() {
+      const input = document.getElementById('pw-input');
+      const hash = await sha256(input.value);
+      if (hash === PASS_HASH) {
+        sessionStorage.setItem('calcUnlocked', '1');
+        document.getElementById('lock').style.display = 'none';
+      } else {
+        document.getElementById('lock-error').textContent = 'パスワードが違います 🙅';
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    // 同じタブで開き直したときは再入力不要にする
+    if (sessionStorage.getItem('calcUnlocked') === '1') {
+      document.getElementById('lock').style.display = 'none';
+    }
+
+    // 入力欄でEnterキーでも「ひらく」
+    document.getElementById('pw-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') tryUnlock();
+    });
+
+    // ===== ここから計算機本体 =====
+    let current = '0';      // いま入力中の数字
+    let previous = null;    // 1つ前に確定した数字
+    let operator = null;    // 選んだ演算子（＋ − × ÷）
+    let justCalculated = false; // 直前に「=」を押したか
+
+    const currentEl = document.getElementById('current');
+    const historyEl = document.getElementById('history');
+
+    function updateDisplay() {
+      currentEl.textContent = current;
+      if (previous !== null && operator) {
+        historyEl.textContent = previous + ' ' + operator;
+      } else {
+        historyEl.textContent = '';
+      }
+    }
+
+    // 数字を入力
+    function inputNumber(num) {
+      if (justCalculated) {
+        current = '0';
+        justCalculated = false;
+      }
+      if (current === '0') {
+        current = num;
+      } else {
+        current += num;
+      }
+      updateDisplay();
+    }
+
+    // 小数点を入力
+    function inputDot() {
+      if (justCalculated) {
+        current = '0';
+        justCalculated = false;
+      }
+      if (!current.includes('.')) {
+        current += '.';
+      }
+      updateDisplay();
+    }
+
+    // 演算子を選ぶ
+    function chooseOp(op) {
+      if (operator && previous !== null && !justCalculated) {
+        calculate();
+      }
+      previous = current;
+      operator = op;
+      justCalculated = false;
+      current = '0';
+      updateDisplay();
+    }
+
+    // 計算を実行
+    function calculate() {
+      if (operator === null || previous === null) return;
+
+      const a = parseFloat(previous);
+      const b = parseFloat(current);
+      let result;
+
+      switch (operator) {
+        case '＋': result = a + b; break;
+        case '−': result = a - b; break;
+        case '×': result = a * b; break;
+        case '÷':
+          if (b === 0) {
+            current = 'エラー';
+            previous = null;
+            operator = null;
+            justCalculated = true;
+            updateDisplay();
+            return;
+          }
+          result = a / b;
+          break;
+      }
+
+      // 長い小数はほどよく丸める
+      result = Math.round(result * 100000000) / 100000000;
+
+      current = String(result);
+      previous = null;
+      operator = null;
+      justCalculated = true;
+      updateDisplay();
+    }
+
+    // %（100で割る）
+    function percent() {
+      current = String(parseFloat(current) / 100);
+      updateDisplay();
+    }
+
+    // 全部消す（C）
+    function clearAll() {
+      current = '0';
+      previous = null;
+      operator = null;
+      justCalculated = false;
+      updateDisplay();
+    }
+
+    // 1文字だけ消す（←）
+    function deleteLast() {
+      if (justCalculated) {
+        clearAll();
+        return;
+      }
+      if (current.length > 1) {
+        current = current.slice(0, -1);
+      } else {
+        current = '0';
+      }
+      updateDisplay();
+    }
+
+    // キーボードでも操作できるように
+    document.addEventListener('keydown', function(e) {
+      // パスワード入力中は計算機を反応させない
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key >= '0' && e.key <= '9') inputNumber(e.key);
+      else if (e.key === '.') inputDot();
+      else if (e.key === '+') chooseOp('＋');
+      else if (e.key === '-') chooseOp('−');
+      else if (e.key === '*') chooseOp('×');
+      else if (e.key === '/') { e.preventDefault(); chooseOp('÷'); }
+      else if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); calculate(); }
+      else if (e.key === 'Backspace') deleteLast();
+      else if (e.key === 'Escape') clearAll();
+    });
+
+    updateDisplay();
+  </script>
+</body>
+</html>
