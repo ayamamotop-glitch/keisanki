@@ -111,6 +111,53 @@
       grid-column: span 2;
     }
 
+    /* AIニュースコーナー */
+    .news {
+      background: #fff;
+      border-radius: 16px;
+      padding: 14px 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 320px;
+      margin-bottom: 14px;
+    }
+
+    .news-head {
+      font-weight: 700;
+      font-size: 15px;
+      color: #333;
+      margin-bottom: 6px;
+    }
+
+    .news ul {
+      list-style: none;
+    }
+
+    .news li {
+      padding: 7px 0;
+      border-top: 1px solid #eee;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .news li:first-child {
+      border-top: none;
+    }
+
+    .news a {
+      color: #5561c9;
+      text-decoration: none;
+      word-break: break-word;
+    }
+
+    .news a:hover {
+      text-decoration: underline;
+    }
+
+    .news-note {
+      color: #888;
+    }
+
     /* ロック画面（パスワード入力） */
     #lock {
       position: fixed;
@@ -188,6 +235,14 @@
   </div>
 
   <h1>🧮 かんたん計算機</h1>
+
+  <!-- AIニュースコーナー -->
+  <div class="news">
+    <div class="news-head">🗞️ AIニュース</div>
+    <ul id="news-list">
+      <li class="news-note">読み込み中…</li>
+    </ul>
+  </div>
 
   <div class="calculator">
     <div class="display">
@@ -394,6 +449,58 @@
     });
 
     updateDisplay();
+
+    // ===== AIニュース =====
+    // Googleニュースの「AI」検索結果（日本語）を取ってきて表示します
+    const NEWS_FEED = 'https://news.google.com/rss/search?q=AI&hl=ja&gl=JP&ceid=JP:ja';
+
+    async function fetchNews() {
+      // 第1候補：rss2json（RSSをJSONに変換してくれる無料サービス）
+      try {
+        const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(NEWS_FEED));
+        const data = await res.json();
+        if (data.status === 'ok' && data.items && data.items.length) {
+          return data.items;
+        }
+      } catch (e) { /* だめなら第2候補へ */ }
+
+      // 第2候補：allorigins（中継サービス）
+      const res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(NEWS_FEED));
+      const text = await res.text();
+      const doc = new DOMParser().parseFromString(text, 'text/xml');
+      const items = Array.from(doc.querySelectorAll('item')).map(function(it) {
+        const titleEl = it.querySelector('title');
+        const linkEl = it.querySelector('link');
+        return {
+          title: titleEl ? titleEl.textContent : '',
+          link: linkEl ? linkEl.textContent : ''
+        };
+      }).filter(function(x) { return x.title && x.link; });
+      if (!items.length) throw new Error('ニュースが空でした');
+      return items;
+    }
+
+    async function loadNews() {
+      const list = document.getElementById('news-list');
+      try {
+        const items = await fetchNews();
+        list.innerHTML = '';
+        items.slice(0, 5).forEach(function(item) {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = item.link;
+          a.target = '_blank';       // 新しいタブで開く
+          a.rel = 'noopener';
+          a.textContent = item.title;
+          li.appendChild(a);
+          list.appendChild(li);
+        });
+      } catch (e) {
+        list.innerHTML = '<li class="news-note">ニュースを取得できませんでした🙏 時間をおいて見てみてください</li>';
+      }
+    }
+
+    loadNews();
   </script>
 </body>
 </html>
